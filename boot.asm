@@ -1,5 +1,8 @@
-ORG	0x7c0
+ORG	0x7c00
 BITS 	16
+
+CODE_SEG equ gdt_code - gdt_start	;apunta al offset 0x8
+DATA_SEG equ gdt_data - gdt_start	;apunta al offset 0x10
 _start:
 	jmp short step1		;salto al programa para poder asignar a 0 los siguientes 33 bytes,
 	nop			;que constituyen el BPB y deben ser asignados para evitar
@@ -18,8 +21,13 @@ step2:
 	mov sp, 0x7c00		;asigna puntero de pila a su origen
 	sti			;activa interrupciones
 	
-	jmp $
-
+.load_protected:
+	cli
+	lgdt [gdt_descriptor]
+	mov eax, cr0		;operación de copia del registro de control CR0, para modificar solo el último vie
+	or eax, 0x1		;que es el que activa o desactiva el modo protegido
+	mov cr0, eax
+	jmp CODE_SEG:load32
 
 ;GDT
 gdt_start:
@@ -48,26 +56,19 @@ gdt_end:
 
 gdt_descriptor:
 	dw gdt_end - gdt_start-1	;tamaño del descriptor
-	dd gdt_start			;tamaño del offset
+	dd gdt_start			;inicio del offset del GDT
 
-
-print:
-	mov bx, 0
-.loop:
-	lodsb
-	cmp al, 0
-	je .done
-	call print_char
-	jmp .loop
-.done:	
-	ret
-
-print_char:
-	mov ah, 0eh
-	int 0x10
-	ret
-
-message: db 'Welcome to sotOS!', 0
+[BITS 32]
+load32:
+	mov ax, DATA_SEG
+	mov ds, ax
+	mov es, ax
+	mov fs, ax
+	mov gs, ax
+	mov ss, ax
+	mov ebp, 0x00200000
+	mov esp, ebp
+	jmp $
 
 times 510-($ - $$) db 0
 dw 0xAA55
