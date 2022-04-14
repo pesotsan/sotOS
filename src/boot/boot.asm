@@ -27,7 +27,8 @@ step2:
 	mov eax, cr0		;operación de copia del registro de control CR0, para modificar solo el último bit
 	or eax, 0x1		;que es el que activa o desactiva el modo protegido
 	mov cr0, eax
-	jmp CODE_SEG:load32
+	;jmp CODE_SEG:load32	;saltará a la dirección de memoria donde se carga el kernel
+	jmp $
 
 ;GDT
 gdt_start:
@@ -58,22 +59,6 @@ gdt_descriptor:
 	dw gdt_end - gdt_start-1	;tamaño del descriptor
 	dd gdt_start			;inicio del offset del GDT
 
-[BITS 32]
-load32:
-	mov ax, DATA_SEG
-	mov ds, ax
-	mov es, ax
-	mov fs, ax
-	mov gs, ax
-	mov ss, ax
-	mov ebp, 0x00200000
-	mov esp, ebp
-
-	;activación de la línea A20 de acceso a memoria
-	in al, 0x92
-	or al, 2
-	out 0x92, al
-	jmp $
 
 times 510-($ - $$) db 0
 dw 0xAA55
